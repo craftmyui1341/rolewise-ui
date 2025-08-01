@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 
 interface LayoutProps {
   children: React.ReactNode;
+  userRole: 'employee' | 'hr' | 'admin';
 }
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, userRole }: LayoutProps) {
   const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => {
@@ -20,7 +21,7 @@ export function Layout({ children }: LayoutProps) {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-bg">
-        <AppSidebar />
+        <AppSidebar userRole={userRole} />
         
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}

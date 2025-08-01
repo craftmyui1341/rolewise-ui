@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { 
   Users, 
   ClipboardList, 
@@ -12,7 +12,8 @@ import {
   Shield,
   UserCog,
   ChevronDown,
-  Home
+  Home,
+  User
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,59 +35,56 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/components/ui/use-toast";
 
-// Mock user data - in real app this would come from auth context
-const getCurrentUser = () => ({
-  name: "John Smith",
-  email: "john.smith@company.com",
-  role: "employee", // employee, hr, admin
-  avatar: "/api/placeholder/32/32"
-});
+interface SidebarProps {
+  userRole: 'employee' | 'hr' | 'admin';
+}
 
 const getMenuItems = (role: string) => {
-  const baseItems = [
-    { title: "Dashboard", url: "/", icon: Home }
-  ];
-
   const menuItems = {
     employee: [
-      ...baseItems,
-      { title: "My Tasks", url: "/tasks", icon: ClipboardList },
-      { title: "Leaves", url: "/leaves", icon: Calendar },
-      { title: "Tickets", url: "/tickets", icon: MessageSquare },
-      { title: "Payslips", url: "/payslips", icon: FileText },
-      { title: "Holidays", url: "/holidays", icon: Calendar },
-      { title: "Check-in/out", url: "/attendance", icon: Clock },
+      { title: "Dashboard", url: `/dashboard/${role}`, icon: Home },
+      { title: "My Tasks", url: `/dashboard/${role}/tasks`, icon: ClipboardList },
+      { title: "Leaves", url: `/dashboard/${role}/leaves`, icon: Calendar },
+      { title: "Tickets", url: `/dashboard/${role}/tickets`, icon: MessageSquare },
+      { title: "Payslips", url: `/dashboard/${role}/payslips`, icon: FileText },
+      { title: "Holidays", url: `/dashboard/${role}/holidays`, icon: Calendar },
+      { title: "Profile", url: `/dashboard/${role}/profile`, icon: User },
     ],
     hr: [
-      ...baseItems,
-      { title: "Employees", url: "/employees", icon: Users },
-      { title: "Leave Management", url: "/leave-management", icon: Calendar },
-      { title: "Complaint Box", url: "/complaints", icon: MessageSquare },
-      { title: "Payslip Upload", url: "/payslip-upload", icon: FileText },
-      { title: "Performance", url: "/performance", icon: UserCog },
-      { title: "Attendance Overview", url: "/attendance-overview", icon: Clock },
+      { title: "Dashboard", url: `/dashboard/${role}`, icon: Home },
+      { title: "Employees", url: `/dashboard/${role}/employees`, icon: Users },
+      { title: "Leave Management", url: `/dashboard/${role}/leave-management`, icon: Calendar },
+      { title: "Payslips", url: `/dashboard/${role}/payslips`, icon: FileText },
+      { title: "Complaint Box", url: `/dashboard/${role}/complaints`, icon: MessageSquare },
+      { title: "Holidays", url: `/dashboard/${role}/holidays`, icon: Calendar },
+      { title: "Profile", url: `/dashboard/${role}/profile`, icon: User },
     ],
     admin: [
-      ...baseItems,
-      { title: "Employee Management", url: "/employee-management", icon: Users },
-      { title: "Team Performance", url: "/team-performance", icon: UserCog },
-      { title: "Complaint Box", url: "/admin-complaints", icon: MessageSquare },
-      { title: "Leave Management", url: "/admin-leaves", icon: Calendar },
-      { title: "Attendance Overview", url: "/admin-attendance", icon: Clock },
-      { title: "System Settings", url: "/settings", icon: Settings },
+      { title: "Dashboard", url: `/dashboard/${role}`, icon: Home },
+      { title: "Employees", url: `/dashboard/${role}/employees`, icon: Users },
+      { title: "Leave Oversight", url: `/dashboard/${role}/leave-oversight`, icon: Calendar },
+      { title: "Complaints", url: `/dashboard/${role}/complaints`, icon: MessageSquare },
+      { title: "Attendance Overview", url: `/dashboard/${role}/attendance`, icon: Clock },
+      { title: "Team Performance", url: `/dashboard/${role}/performance`, icon: UserCog },
+      { title: "Holidays", url: `/dashboard/${role}/holidays`, icon: Calendar },
+      { title: "Profile", url: `/dashboard/${role}/profile`, icon: User },
     ]
   };
 
   return menuItems[role as keyof typeof menuItems] || menuItems.employee;
 };
 
-export function AppSidebar() {
+export function AppSidebar({ userRole }: SidebarProps) {
   const { state } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
-  const currentUser = getCurrentUser();
-  const menuItems = getMenuItems(currentUser.role);
+  const { user, logout } = useAuth();
+  const { toast } = useToast();
+  const menuItems = getMenuItems(userRole);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   
   const isCollapsed = state === "collapsed";
@@ -103,6 +101,15 @@ export function AppSidebar() {
       case 'hr': return 'bg-warning/10 text-warning';
       default: return 'bg-primary/10 text-primary';
     }
+  };
+
+  const handleSignOut = () => {
+    logout();
+    navigate('/login');
+    toast({
+      title: "Signed Out",
+      description: "You have been successfully signed out."
+    });
   };
 
   return (
@@ -139,9 +146,9 @@ export function AppSidebar() {
               >
                 <div className="flex items-center space-x-3 w-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={currentUser.avatar} />
+                    <AvatarImage src={user?.avatar} />
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      {currentUser.name.split(' ').map(n => n[0]).join('')}
+                      {user?.name.split(' ').map(n => n[0]).join('') || 'U'}
                     </AvatarFallback>
                   </Avatar>
                   {!isCollapsed && (
@@ -149,13 +156,13 @@ export function AppSidebar() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium text-sidebar-foreground">
-                            {currentUser.name}
+                            {user?.name}
                           </p>
                           <Badge 
                             variant="secondary" 
-                            className={`text-xs mt-1 ${getRoleBadgeColor(currentUser.role)}`}
+                            className={`text-xs mt-1 ${getRoleBadgeColor(user?.role || 'employee')}`}
                           >
-                            {currentUser.role.toUpperCase()}
+                            {user?.role.toUpperCase()}
                           </Badge>
                         </div>
                         <ChevronDown className={`h-4 w-4 text-sidebar-foreground transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
@@ -168,7 +175,7 @@ export function AppSidebar() {
             {!isCollapsed && (
               <CollapsibleContent className="mt-2">
                 <div className="text-xs text-sidebar-foreground/60 px-1">
-                  {currentUser.email}
+                  {user?.email}
                 </div>
               </CollapsibleContent>
             )}
@@ -201,10 +208,7 @@ export function AppSidebar() {
           <Button 
             variant="ghost" 
             className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
-            onClick={() => {
-              // In real app, this would handle sign out
-              console.log("Sign out clicked");
-            }}
+            onClick={handleSignOut}
           >
             <LogOut className="h-5 w-5" />
             {!isCollapsed && <span className="ml-3">Sign Out</span>}

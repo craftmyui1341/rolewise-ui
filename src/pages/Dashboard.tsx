@@ -13,11 +13,7 @@ import {
   AlertCircle
 } from "lucide-react";
 
-// Mock data - would come from API in real app
-const getCurrentUser = () => ({
-  name: "John Smith",
-  role: "employee" // employee, hr, admin
-});
+import { useAuth } from "@/context/AuthContext";
 
 const mockData = {
   employee: {
@@ -71,13 +67,14 @@ const StatCard = ({ title, value, subtitle, icon: Icon, trend, className = "" }:
 );
 
 const EmployeeDashboard = () => {
+  const { user } = useAuth();
   const data = mockData.employee;
   
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Welcome back, John!</h1>
+          <h1 className="text-3xl font-bold">Welcome back, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-muted-foreground">Here's what's happening with your work today.</p>
         </div>
         <Button className="btn-gradient">
@@ -372,9 +369,9 @@ const AdminDashboard = () => {
 };
 
 export default function Dashboard() {
-  const currentUser = getCurrentUser();
+  const { user } = useAuth();
   
-  switch (currentUser.role) {
+  switch (user?.role) {
     case 'hr':
       return <HRDashboard />;
     case 'admin':
